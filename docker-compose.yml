@@ -1,0 +1,44 @@
+version: '3.3'
+
+services:
+  mongodb:
+    container_name: service_mongodb
+    restart: always
+    image: mongo:latest
+    volumes:
+      - .:/app
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin_pass
+
+  api:
+    container_name: service_api
+    build: core
+    restart: always
+    command: bash -c "uvicorn core.app:app --host 0.0.0.0 --port 8001 --reload"
+    volumes:
+      - .:/usr/src/app/
+    depends_on:
+      - mongodb
+
+  nginx:
+    container_name: service_nginx
+    image: nginx:1.19.9-alpine
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./conf/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./conf/nginx/ssl:/etc/ssl:ro
+      - logs:/mount/logs
+    depends_on:
+      - api
+    restart: on-failure
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "500mb"
+
+volumes:
+  logs:
+
